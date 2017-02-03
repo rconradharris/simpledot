@@ -20,9 +20,9 @@ How to Use
 
 2) Add directory to `dotfiles` using `source` command
 
-3) Annotate your dotfiles with 'dotfile @ <dst>' somewhere in the file,
+3) Annotate your dotfiles with ``dotfile @ <dst>`` somewhere in the file,
    for example, your `vimrc` might contain::
 
     """ dotfile @ ~/.vimrc
 
-4) Run `simpledot scatter` to create symlinks
+4) Run ``simpledot scatter`` to create symlinks
