@@ -76,11 +76,13 @@ def yield_annotations():
                         yield (src, dst)
 
 
+def cmd_list(args):
+    for src, dst in yield_annotations():
+        print("{} -> {}".format(src, dst))
+
+
 def cmd_scatter(args):
     for src, dst in yield_annotations():
-        print((src, dst))
-        continue
-
         if not os.path.exists(src):
             print("warning: source file '{}' does not exist".format(src),
                   file=sys.stderr)
@@ -119,6 +121,9 @@ def cmd_gather(args):
 def main():
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers()
+
+    source_parser = subparsers.add_parser('list')
+    source_parser.set_defaults(func=cmd_list)
 
     source_parser = subparsers.add_parser('source')
     source_parser.add_argument('path')
