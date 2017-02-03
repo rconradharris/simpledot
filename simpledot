@@ -1,0 +1,138 @@
+#!/usr/bin/env python
+'''
+simpledot: Simple dotfiles management for use with iCloud Drive or DropBox.
+
+source - Add a directory which contains files to symlink
+scatter - Scatter symlinks across filesystem
+gather - Gather symlinks across the filesystem (cleanup)
+
+To use:
+
+    1) Copy your dotfiles into a directory
+
+    2) Add directory to `dotfiles` using `source` command
+
+    3) Annotate your dotfiles with 'dotfile @ <dst>' somewhere in the file,
+       for example, your `vimrc` might contain:
+
+        """ dotfile @ ~/.vimrc
+
+    4) Run `simpledot scatter` to create symlinks
+'''
+from __future__ import print_function
+import argparse
+import errno
+import os
+import re
+import sys
+
+
+IGNORE_LIST = ['.swp']
+DOTFILES_SOURCES = '~/.simpledot'
+RE_DOTFILE = re.compile('dotfile\s+@\s+(.*)')
+
+
+def cmd_source(args):
+    path = os.path.expanduser(args.path)
+    if not os.path.exists(path):
+        sys.exit("error: '{}' not found".format(path))
+
+    sources_path = get_sources_path()
+    with open(sources_path, 'a') as f:
+        f.write(path + '\n')
+
+
+def get_sources_path():
+    return os.path.expanduser(DOTFILES_SOURCES)
+
+
+def get_sources():
+    sources = []
+    sources_path = get_sources_path()
+    with open(sources_path) as f:
+        for line in f:
+            sources.append(line.strip())
+    return sources
+
+
+def yield_annotations():
+    sources = get_sources()
+    for source in sources:
+        for root, dirnames, filenames in os.walk(source):
+            for filename in filenames:
+                ignore = False
+                for suffix in IGNORE_LIST:
+                    if filename.endswith(suffix):
+                        ignore = True
+                        break
+                if ignore:
+                    continue
+                src = os.path.join(root, filename)
+                with open(src) as f:
+                    match = RE_DOTFILE.search(f.read())
+                    if match:
+                        dst =  match.group(1).strip()
+                        dst = os.path.expanduser(dst)
+                        yield (src, dst)
+
+
+def cmd_scatter(args):
+    for src, dst in yield_annotations():
+        print((src, dst))
+        continue
+
+        if not os.path.exists(src):
+            print("warning: source file '{}' does not exist".format(src),
+                  file=sys.stderr)
+            continue
+        if os.path.islink(src):
+            print("warning: src '{}' is a symbolic link".format(src),
+                  file=sys.stderr)
+            continue
+        if os.path.exists(dst):
+            print("warning: '{}' already exists".format(dst),
+                  file=sys.stderr)
+            continue
+
+        dst_dirname = os.path.dirname(dst)
+        try:
+            os.makedirs(dst_dirname)
+        except OSError as e:
+            if e.errno != errno.EEXIST:
+                raise
+        os.symlink(src, dst)
+
+
+def cmd_gather(args):
+    for src, dst in yield_annotations():
+        if not os.path.exists(dst):
+            print("warning: '{}' does not exist".format(dst),
+                  file=sys.stderr)
+            continue
+        if not os.path.islink(dst):
+            print("warning: '{}' is not a symbolic link".format(dst),
+                  file=sys.stderr)
+            continue
+        os.unlink(dst)
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    subparsers = parser.add_subparsers()
+
+    source_parser = subparsers.add_parser('source')
+    source_parser.add_argument('path')
+    source_parser.set_defaults(func=cmd_source)
+
+    source_parser = subparsers.add_parser('scatter')
+    source_parser.set_defaults(func=cmd_scatter)
+
+    source_parser = subparsers.add_parser('gather')
+    source_parser.set_defaults(func=cmd_gather)
+
+    args = parser.parse_args()
+    return args.func(args)
+
+
+if __name__ == '__main__':
+    main()
