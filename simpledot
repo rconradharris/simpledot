@@ -32,6 +32,10 @@ DOTFILES_SOURCES = '~/.simpledot'
 RE_DOTFILE = re.compile('dotfile\s+@\s+(.*)')
 
 
+class SourcesNotFound(Exception):
+    pass
+
+
 def cmd_source(args):
     path = os.path.expanduser(args.path)
     if not os.path.exists(path):
@@ -47,8 +51,10 @@ def get_sources_path():
 
 
 def get_sources():
-    sources = []
     sources_path = get_sources_path()
+    if not os.path.exists(sources_path):
+        raise SourcesNotFound
+    sources = []
     with open(sources_path) as f:
         for line in f:
             sources.append(line.strip())
@@ -56,7 +62,10 @@ def get_sources():
 
 
 def yield_annotations():
-    sources = get_sources()
+    try:
+        sources = get_sources()
+    except SourcesNotFound:
+        sys.exit("error: no sources, first use 'source' to add a directory")
     for source in sources:
         for root, dirnames, filenames in os.walk(source):
             for filename in filenames:
