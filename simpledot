@@ -2,9 +2,10 @@
 '''
 simpledot: Simple dotfiles management for use with iCloud Drive or DropBox.
 
-source - Add a directory which contains files to symlink
+list - List files that are currently or will be symlinked
+source - Add a directory containing files to symlink
 scatter - Scatter symlinks across filesystem
-gather - Gather symlinks across the filesystem (cleanup)
+clean - Remove symlinks across the filesystem
 
 To use:
 
@@ -114,7 +115,7 @@ def cmd_scatter(args):
         os.symlink(src, dst)
 
 
-def cmd_gather(args):
+def cmd_clean(args):
     for src, dst in yield_annotations():
         if not os.path.exists(dst):
             print("warning: '{}' does not exist".format(dst),
@@ -141,8 +142,8 @@ def main():
     source_parser = subparsers.add_parser('scatter')
     source_parser.set_defaults(func=cmd_scatter)
 
-    source_parser = subparsers.add_parser('gather')
-    source_parser.set_defaults(func=cmd_gather)
+    source_parser = subparsers.add_parser('clean')
+    source_parser.set_defaults(func=cmd_clean)
 
     args = parser.parse_args()
     return args.func(args)
