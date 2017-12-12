@@ -1,26 +1,5 @@
 #!/usr/bin/env python
 # -*- coding: utf8 -*-
-'''
-simpledot: Simple dotfiles management for use with iCloud Drive or DropBox.
-
-list - List files that are currently or will be symlinked
-source - Add a directory containing files to symlink
-up - Scatter symlinks across filesystem
-down - Remove symlinks across the filesystem
-
-To use:
-
-    1) Copy your dotfiles into a directory
-
-    2) Add directory to `dotfiles` using `source` command
-
-    3) Annotate your dotfiles with 'dotfile @ <dst>' somewhere in the file,
-       for example, your `vimrc` might contain:
-
-        """ dotfile @ ~/.vimrc
-
-    4) Run `simpledot up` to create symlinks
-'''
 from __future__ import print_function
 import argparse
 import errno
