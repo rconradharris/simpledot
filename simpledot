@@ -5,8 +5,8 @@ simpledot: Simple dotfiles management for use with iCloud Drive or DropBox.
 
 list - List files that are currently or will be symlinked
 source - Add a directory containing files to symlink
-scatter - Scatter symlinks across filesystem
-clean - Remove symlinks across the filesystem
+up - Scatter symlinks across filesystem
+down - Remove symlinks across the filesystem
 
 To use:
 
@@ -19,7 +19,7 @@ To use:
 
         """ dotfile @ ~/.vimrc
 
-    4) Run `simpledot scatter` to create symlinks
+    4) Run `simpledot up` to create symlinks
 '''
 from __future__ import print_function
 import argparse
@@ -101,7 +101,7 @@ def cmd_list(args):
         print("\t{} {:20} -> {}".format(exists, relsrc, dst))
 
 
-def cmd_scatter(args):
+def cmd_up(args):
     for src, dst in yield_annotations():
         if not os.path.exists(src):
             print("warning: source file '{}' does not exist".format(src),
@@ -125,7 +125,7 @@ def cmd_scatter(args):
         os.symlink(src, dst)
 
 
-def cmd_clean(args):
+def cmd_down(args):
     for src, dst in yield_annotations():
         if not os.path.exists(dst):
             print("warning: '{}' does not exist".format(dst),
@@ -149,11 +149,11 @@ def main():
     source_parser.add_argument('path')
     source_parser.set_defaults(func=cmd_source)
 
-    source_parser = subparsers.add_parser('scatter')
-    source_parser.set_defaults(func=cmd_scatter)
+    source_parser = subparsers.add_parser('up')
+    source_parser.set_defaults(func=cmd_up)
 
-    source_parser = subparsers.add_parser('clean')
-    source_parser.set_defaults(func=cmd_clean)
+    source_parser = subparsers.add_parser('down')
+    source_parser.set_defaults(func=cmd_down)
 
     args = parser.parse_args()
     return args.func(args)
