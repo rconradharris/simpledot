@@ -2,21 +2,39 @@
 simpledot
 =========
 
-Simple dotfiles management for use with iCloud Drive or DropBox.
+``simpledot`` is a utility for managing dotfiles. You store them in a single
+location, like a directory in iCloud Drive, Dropbox, or a ``git`` repository
+and ``simpledot`` will automatically create symlinks correct location when you
+run ``simpledot up``.
+
+How does ``simpledot`` know where to create the symlink? Inside your dotfile
+you include an 'annotation' line. For example, a ``vimrc`` might contain::
+
+    """ dotfile @ ~/.vimrc
+    set ts=4
+    ... rest of vimrc ...
+
+Likewise, your ``.bash_profile`` might contain::
+
+
+    """ dotfile @ ~/.bash_profile
+    alias ls="ls -G"
+    ... rest of bash_profile ...
 
 Commands
 ========
 
 * source - Add a directory which contains files to symlink
 * list - List what will be symlinked
-* scatter - Scatter symlinks across filesystem
-* gather - Gather symlinks across the filesystem (cleanup)
+* up - Add symlinks across filesystem
+* down - Remove any symlinks that were created
 
 
 How to Use
 ==========
 
-1) Copy your dotfiles into a directory
+1) Copy your dotfiles into a directory (iCloud Drive, Dropbox, or a ``git``
+repo)
 
 2) Add directory to `dotfiles` using `source` command
 
@@ -25,4 +43,4 @@ How to Use
 
     """ dotfile @ ~/.vimrc
 
-4) Run ``simpledot scatter`` to create symlinks
+4) Run ``simpledot up`` to create symlinks
