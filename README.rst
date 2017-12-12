@@ -44,3 +44,14 @@ repo)
     """ dotfile @ ~/.vimrc
 
 4) Run ``simpledot up`` to create symlinks
+
+5) Run ``simpledot list`` to verify that symlinks were created. You should see
+a checkmark for each dotfile::
+
+    $ ./simpledot list
+    Source: /Users/rick/.simpledot
+
+    ✓ bash_profile         -> /Users/rick/.bash_profile
+    ✓ ssh_config           -> /Users/rick/.ssh/config
+    ✓ vimrc                -> /Users/rick/.vimrc
+    ✓ gitconfig            -> /Users/rick/.gitconfig

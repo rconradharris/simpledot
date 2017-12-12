@@ -9,12 +9,8 @@ import sys
 
 
 IGNORE_LIST = ['.swp']
-DOTFILES_SOURCES = '~/.simpledot'
+SOURCE = os.path.expanduser('~/.simpledot')
 RE_DOTFILE = re.compile('dotfile\s+@\s+(.*)')
-
-
-class SourcesNotFound(Exception):
-    pass
 
 
 def cmd_source(args):
@@ -22,62 +18,40 @@ def cmd_source(args):
     if not os.path.exists(path):
         sys.exit("error: '{}' not found".format(path))
 
-    sources_path = get_sources_path()
-    with open(sources_path, 'a') as f:
-        f.write(path + '\n')
+    if os.path.exists(SOURCE):
+        sys.exit("error: '{}' already exists, delete it if you'd like to add"
+                 " a different source".format(SOURCE))
+
+    os.symlink(args.path, SOURCE)
 
 
-def get_sources_path():
-    return os.path.expanduser(DOTFILES_SOURCES)
-
-
-def get_sources():
-    sources_path = get_sources_path()
-    if not os.path.exists(sources_path):
-        raise SourcesNotFound
-    sources = []
-    with open(sources_path) as f:
-        for line in f:
-            sources.append(line.strip())
-    return sources
-
-
-def yield_annotations(include_source=False):
-    try:
-        sources = get_sources()
-    except SourcesNotFound:
+def yield_annotations():
+    if not os.path.exists(SOURCE):
         sys.exit("error: no sources, first use 'source' to add a directory")
-    for source in sources:
-        for root, dirnames, filenames in os.walk(source):
-            for filename in filenames:
-                ignore = False
-                for suffix in IGNORE_LIST:
-                    if filename.endswith(suffix):
-                        ignore = True
-                        break
-                if ignore:
-                    continue
-                src = os.path.join(root, filename)
-                with open(src) as f:
-                    match = RE_DOTFILE.search(f.read())
-                    if match:
-                        dst =  match.group(1).strip()
-                        dst = os.path.expanduser(dst)
-                        if include_source:
-                            yield source, (src, dst)
-                        else:
-                            yield (src, dst)
+    for root, dirnames, filenames in os.walk(SOURCE):
+        for filename in filenames:
+            ignore = False
+            for suffix in IGNORE_LIST:
+                if filename.endswith(suffix):
+                    ignore = True
+                    break
+            if ignore:
+                continue
+            src = os.path.join(root, filename)
+            with open(src) as f:
+                match = RE_DOTFILE.search(f.read())
+                if match:
+                    dst =  match.group(1).strip()
+                    dst = os.path.expanduser(dst)
+                    yield src, dst
 
 
 def cmd_list(args):
-    cur_source = None
-    for source, (src, dst) in yield_annotations(include_source=True):
-        if cur_source != source:
-            cur_source = source
-            print(source)
-        relsrc = os.path.relpath(src, source)
+    print("Source: {}\n".format(SOURCE))
+    for src, dst in yield_annotations():
+        relsrc = os.path.relpath(src, SOURCE)
         exists = '✓' if os.path.exists(dst) else '✗'
-        print("\t{} {:20} -> {}".format(exists, relsrc, dst))
+        print("{} {:20} -> {}".format(exists, relsrc, dst))
 
 
 def cmd_up(args):
@@ -87,7 +61,7 @@ def cmd_up(args):
                   file=sys.stderr)
             continue
         if os.path.islink(src):
-            print("warning: src '{}' is a symbolic link".format(src),
+            print("warning: source file '{}' is a symbolic link".format(src),
                   file=sys.stderr)
             continue
         if os.path.exists(dst):
