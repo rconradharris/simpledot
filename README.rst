@@ -26,7 +26,9 @@ Commands
 
 * source - Specify directory that contains your annotated dotfiles
 * list - List files in source directory and show whether they've been
-  symlinked with a checkmark, or not, with an 'x'.
+  symlinked with a checkmark, or not, with an 'x'. ``list`` is the default
+  command, so if you run ``simpledot`` without a different command specified,
+  then ``list`` will be run
 * up - Create symlinks
 * down - Remove any symlinks that were created
 
@@ -43,7 +45,7 @@ where the symlink should be created.
 
 3) Run ``simpledot up`` to create symlinks
 
-4) Run ``simpledot list`` to verify that symlinks were created. You should see
+4) Run ``simpledot`` to verify that symlinks were created. You should see
 a checkmark for each dotfile symlink that was created::
 
     $ ./simpledot list
