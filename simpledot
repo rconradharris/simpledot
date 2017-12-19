@@ -12,6 +12,32 @@ IGNORE_LIST = ['.swp']
 SOURCE = os.path.expanduser('~/.simpledot')
 RE_DOTFILE = re.compile('dotfile\s+@\s+(.*)')
 
+COLOR_PREFIX = '\033['
+COLOR_RED = '31m'
+COLOR_GREEN = '32m'
+COLOR_RESET = '0m'
+
+
+def colorize(s, color=None):
+    if not color:
+        return s
+
+    constname = 'COLOR_{}'.format(color.upper())
+    try:
+        color = globals()[constname]
+    except KeyError:
+        print("unknown color '{}'".format(color), file=sys.stderr)
+        return s
+
+    return u''.join([COLOR_PREFIX, color, s, COLOR_PREFIX, COLOR_RESET])
+
+
+def checkmark(checked):
+    if checked:
+        return colorize(u'✓', color='green')
+    else:
+        return colorize(u'✗', color='red')
+
 
 def cmd_source(args):
     path = os.path.expanduser(args.path)
@@ -50,8 +76,8 @@ def cmd_list(args):
     print("Source: {}\n".format(SOURCE))
     for src, dst in yield_annotations():
         relsrc = os.path.relpath(src, SOURCE)
-        exists = '✓' if os.path.exists(dst) else '✗'
-        print("{} {:20} -> {}".format(exists, relsrc, dst))
+        exists = os.path.exists(dst)
+        print(u"{} {:20} -> {}".format(checkmark(exists), relsrc, dst))
 
 
 def cmd_up(args):
