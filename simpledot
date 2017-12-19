@@ -8,7 +8,6 @@ import re
 import sys
 
 
-
 # Monkey-patch argparse so that we can have a default subparse
 # Source: # https://stackoverflow.com/questions/6365601/
 #       default-sub-command-or-handling-no-sub-command-with-argparse
@@ -113,7 +112,7 @@ def yield_annotations():
 
 def cmd_list(args):
     print("Source: {}\n".format(SOURCE))
-    for src, dst in yield_annotations():
+    for src, dst in sorted(yield_annotations()):
         relsrc = os.path.relpath(src, SOURCE)
         exists = os.path.exists(dst)
         print(u"{} {:20} -> {}".format(checkmark(exists), relsrc, dst))
