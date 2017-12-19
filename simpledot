@@ -15,6 +15,7 @@ RE_DOTFILE = re.compile('dotfile\s+@\s+(.*)')
 COLOR_PREFIX = '\033['
 COLOR_RED = '31m'
 COLOR_GREEN = '32m'
+COLOR_YELLOW = '33m'
 COLOR_RESET = '0m'
 
 
@@ -26,7 +27,7 @@ def colorize(s, color=None):
     try:
         color = globals()[constname]
     except KeyError:
-        print("unknown color '{}'".format(color), file=sys.stderr)
+        print("error: unknown color '{}'".format(color), file=sys.stderr)
         return s
 
     return u''.join([COLOR_PREFIX, color, s, COLOR_PREFIX, COLOR_RESET])
@@ -37,6 +38,11 @@ def checkmark(checked):
         return colorize(u'✓', color='green')
     else:
         return colorize(u'✗', color='red')
+
+
+def warn(s):
+    print(colorize(u"warning: {}".format(s), color='yellow'),
+          file=sys.stderr)
 
 
 def cmd_source(args):
@@ -83,16 +89,13 @@ def cmd_list(args):
 def cmd_up(args):
     for src, dst in yield_annotations():
         if not os.path.exists(src):
-            print("warning: source file '{}' does not exist".format(src),
-                  file=sys.stderr)
+            warn("source file '{}' does not exist".format(src))
             continue
         if os.path.islink(src):
-            print("warning: source file '{}' is a symbolic link".format(src),
-                  file=sys.stderr)
+            warn("source file '{}' is a symbolic link".format(src))
             continue
         if os.path.exists(dst):
-            print("warning: '{}' already exists".format(dst),
-                  file=sys.stderr)
+            warn("'{}' already exists".format(dst))
             continue
 
         dst_dirname = os.path.dirname(dst)
@@ -107,12 +110,10 @@ def cmd_up(args):
 def cmd_down(args):
     for src, dst in yield_annotations():
         if not os.path.exists(dst):
-            print("warning: '{}' does not exist".format(dst),
-                  file=sys.stderr)
+            warn("'{}' does not exist".format(dst))
             continue
         if not os.path.islink(dst):
-            print("warning: '{}' is not a symbolic link".format(dst),
-                  file=sys.stderr)
+            warn("'{}' is not a symbolic link".format(dst))
             continue
         os.unlink(dst)
 
