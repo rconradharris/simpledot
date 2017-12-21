@@ -79,6 +79,7 @@ def warn(s):
 
 def cmd_source(args):
     path = os.path.expanduser(args.path)
+    path = os.path.abspath(path)
     if not os.path.exists(path):
         sys.exit("error: '{}' not found".format(path))
 
@@ -86,7 +87,7 @@ def cmd_source(args):
         sys.exit("error: '{}' already exists, delete it if you'd like to add"
                  " a different source".format(SOURCE))
 
-    os.symlink(args.path, SOURCE)
+    os.symlink(path, SOURCE)
 
 
 def yield_annotations():
