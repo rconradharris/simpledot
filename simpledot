@@ -40,7 +40,8 @@ def set_default_subparser(self, name, args=None):
 
 argparse.ArgumentParser.set_default_subparser = set_default_subparser
 
-IGNORE_LIST = ['.swp']
+IGNORE_DIRS = ['.git']
+IGNORE_SUFFIXES = ['.swp']
 SOURCE = os.path.expanduser('~/.simpledot')
 RE_DOTFILE = re.compile('dotfile\s+@\s+(.*)')
 
@@ -93,10 +94,14 @@ def cmd_source(args):
 def yield_annotations():
     if not os.path.exists(SOURCE):
         sys.exit("error: no sources, first use 'source' to add a directory")
-    for root, dirnames, filenames in os.walk(SOURCE):
+    for root, dirnames, filenames in os.walk(SOURCE, topdown=True):
+        # In-place modify dirnames to tell `walk()` to skip these directories
+        # Requires `topdown=True` to work.
+        for dirname in IGNORE_DIRS:
+            dirnames.remove(dirname)
         for filename in filenames:
             ignore = False
-            for suffix in IGNORE_LIST:
+            for suffix in IGNORE_SUFFIXES:
                 if filename.endswith(suffix):
                     ignore = True
                     break
