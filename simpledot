@@ -6,6 +6,8 @@ import errno
 import os
 import re
 import sys
+import platform
+import shutil
 
 
 # Monkey-patch argparse so that we can have a default subparse
@@ -52,8 +54,16 @@ COLOR_YELLOW = '33m'
 COLOR_RESET = '0m'
 
 
+def is_windows():
+    return platform.system().lower() == 'windows'
+
+
+def color_supported():
+    return not is_windows()
+
+
 def colorize(s, color=None):
-    if not color:
+    if not color_supported() or not color:
         return s
 
     constname = 'COLOR_{}'.format(color.upper())
@@ -66,16 +76,25 @@ def colorize(s, color=None):
     return u''.join([COLOR_PREFIX, color, s, COLOR_PREFIX, COLOR_RESET])
 
 
+def fancy_chars_supported():
+    return not is_windows()
+
+
 def checkmark(checked):
-    if checked:
-        return colorize(u'✓', color='green')
-    else:
-        return colorize(u'✗', color='red')
+    char = '[X]' if checked else '[ ]'
+    if fancy_chars_supported():
+        char = u'✓' if checked else u'✗'
+    color = 'green' if checked else 'red'
+    return colorize(char, color=color)
 
 
 def warn(s):
     print(colorize(u"warning: {}".format(s), color='yellow'),
           file=sys.stderr)
+
+
+def can_symlink():
+    return not is_windows()
 
 
 def cmd_source(args):
@@ -88,17 +107,33 @@ def cmd_source(args):
         sys.exit("error: '{}' already exists, delete it if you'd like to add"
                  " a different source".format(SOURCE))
 
-    os.symlink(path, SOURCE)
+    if can_symlink():
+        os.symlink(path, SOURCE)
+    else:
+        with open(SOURCE, 'w') as f:
+            f.write(path)
 
 
 def yield_annotations():
+    source = None
     if not os.path.exists(SOURCE):
         sys.exit("error: no sources, first use 'source' to add a directory")
-    for root, dirnames, filenames in os.walk(SOURCE, topdown=True):
+    if not os.path.islink(SOURCE):
+        if can_symlink():
+            warn("file '{}' is not a symbolic link even though the system"
+                 " supports them".format(SOURCE))
+        with open(SOURCE) as f:
+            source = f.read()
+    if not source:
+        source = SOURCE
+    for root, dirnames, filenames in os.walk(source, topdown=True):
         # In-place modify dirnames to tell `walk()` to skip these directories
         # Requires `topdown=True` to work.
         for dirname in IGNORE_DIRS:
-            dirnames.remove(dirname)
+            try:
+                dirnames.remove(dirname)
+            except ValueError:
+                pass  # Not found
         for filename in filenames:
             ignore = False
             for suffix in IGNORE_SUFFIXES:
@@ -108,7 +143,7 @@ def yield_annotations():
             if ignore:
                 continue
             src = os.path.join(root, filename)
-            with open(src) as f:
+            with open(src, encoding="utf8") as f:
                 match = RE_DOTFILE.search(f.read())
                 if match:
                     dst =  match.group(1).strip()
@@ -142,7 +177,11 @@ def cmd_up(args):
         except OSError as e:
             if e.errno != errno.EEXIST:
                 raise
-        os.symlink(src, dst)
+
+        if can_symlink():
+            os.symlink(src, dst)
+        else:
+            shutil.copyfile(src, dst)
 
 
 def cmd_down(args):
@@ -150,7 +189,7 @@ def cmd_down(args):
         if not os.path.exists(dst):
             warn("'{}' does not exist".format(dst))
             continue
-        if not os.path.islink(dst):
+        if not os.path.islink(dst) and can_symlink():
             warn("'{}' is not a symbolic link".format(dst))
             continue
         os.unlink(dst)
