@@ -149,6 +149,13 @@ def yield_annotations():
                     dst =  match.group(1).strip()
                     dst = os.path.expanduser(dst)
                     yield src, dst
+                elif filename.startswith('.'):
+                    # Files starting with a dot get a default annotation if
+                    # one is missing
+                    dst = os.path.join('~', filename)
+                    dst = os.path.expanduser(dst)
+                    yield src, dst
+
 
 
 def cmd_list(args):

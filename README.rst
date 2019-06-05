@@ -7,19 +7,23 @@ location, like a directory in iCloud Drive, Dropbox, or a ``git`` repository
 and ``simpledot`` will automatically create symlinks to the correct location
 when you run ``simpledot up``.
 
-How does ``simpledot`` know where to create the symlink? Inside your dotfile
-you include an 'annotation' line. For example, a ``vimrc`` might contain::
+By default, ``simpledot`` will symbolically link files that start with a dot
+from your source location to your home directory. For most dotfiles this
+behavior works fine; however, some dotfiles need to be placed in a different
+location.
 
-    """ dotfile @ ~/.vimrc
-    set ts=4
-    ... rest of vimrc ...
+In these cases, you can override the destination by providing an 'annotation'
+at the top of the dotfile which contains the destination location. An example
+of this would be an ``ssh`` config, perhaps called ``ssh_config``, in your
+source location::
 
-Likewise, your ``.bash_profile`` might contain::
+    # dotfile @ ~/.ssh/config
+    Host myserver
+        Hostname myserver.example.com
+        User alice
 
+This would create a symlink from ``<SOURCE>/ssh_config`` to ``~/.ssh/config``.
 
-    # dotfile @ ~/.bash_profile
-    alias ls="ls -G"
-    ... rest of bash_profile ...
 
 Commands
 ========
