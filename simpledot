@@ -88,6 +88,10 @@ def checkmark(checked):
     return colorize(char, color=color)
 
 
+def rightarrow():
+    return '➦' if fancy_chars_supported() else '->'
+
+
 def warn(s):
     print(colorize(u"warning: {}".format(s), color='yellow'),
           file=sys.stderr)
@@ -160,10 +164,25 @@ def yield_annotations():
 
 def cmd_list(args):
     print("Source: {}\n".format(SOURCE))
-    for src, dst in sorted(yield_annotations()):
+
+    annotations = list(sorted(yield_annotations()))
+
+    # Compute longest left-hand-side of ->
+    max_srclen = 0
+    for src, _ in annotations:
         relsrc = os.path.relpath(src, SOURCE)
-        exists = os.path.exists(dst)
-        print(u"{} {:20} -> {}".format(checkmark(exists), relsrc, dst))
+        if len(relsrc) > max_srclen:
+            max_srclen = len(relsrc)
+
+    for src, dst in annotations:
+        relsrc = os.path.relpath(src, SOURCE)
+        parts = [
+            checkmark(os.path.exists(dst)),
+            relsrc.ljust(max_srclen),
+            rightarrow(),
+            dst
+        ]
+        print(u' '.join(parts))
 
 
 def cmd_up(args):
