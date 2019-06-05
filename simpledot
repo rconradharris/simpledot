@@ -43,6 +43,7 @@ def set_default_subparser(self, name, args=None):
 argparse.ArgumentParser.set_default_subparser = set_default_subparser
 
 IGNORE_DIRS = ['.git']
+IGNORE_FILENAMES = ['.git']
 IGNORE_SUFFIXES = ['.swp']
 SOURCE_DEFAULT = os.path.expanduser('~/dotfiles')
 SOURCE_OVERRIDE = os.path.expanduser('~/.simpledot')
@@ -136,6 +137,11 @@ def yield_annotations():
         for dirname in IGNORE_DIRS:
             try:
                 dirnames.remove(dirname)
+            except ValueError:
+                pass  # Not found
+        for fname in IGNORE_FILENAMES:
+            try:
+                filenames.remove(fname)
             except ValueError:
                 pass  # Not found
         for filename in filenames:
