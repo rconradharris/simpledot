@@ -28,7 +28,7 @@ This would create a symlink from ``<SOURCE>/ssh_config`` to ``~/.ssh/config``.
 Commands
 ========
 
-* source - Specify directory that contains your annotated dotfiles
+* source - Specify a source directory override (default is ``~/dotfiles``)
 * list - List files in source directory and show whether they've been
   symlinked with a checkmark, or not, with an 'x'. ``list`` is the default
   command, so if you run ``simpledot`` without a different command specified,
@@ -43,9 +43,9 @@ How to Use
 1) Copy your dotfiles into a directory (iCloud Drive, Dropbox, or a ``git``
 repo)
 
-2) Register your dotfiles directory with simpledot using the ``simpledot
-source`` command. Make sure your dotfile contain annotation which describe
-where the symlink should be created.
+2) If you're not storing your dotfiles at ``~/dotfiles``, register your
+dotfiles directory with simpledot using the ``simpledot source`` command. Add
+any annotation overrides to the files if necessary.
 
 3) Run ``simpledot up`` to create symlinks
 
@@ -53,7 +53,7 @@ where the symlink should be created.
 a checkmark for each dotfile symlink that was created::
 
     $ ./simpledot list
-    Source: /Users/rick/.simpledot
+    Source: /Users/rick/dotfiles
 
     ✓ bash_profile         -> /Users/rick/.bash_profile
     ✓ ssh_config           -> /Users/rick/.ssh/config

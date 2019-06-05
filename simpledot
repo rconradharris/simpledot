@@ -44,7 +44,8 @@ argparse.ArgumentParser.set_default_subparser = set_default_subparser
 
 IGNORE_DIRS = ['.git']
 IGNORE_SUFFIXES = ['.swp']
-SOURCE = os.path.expanduser('~/.simpledot')
+SOURCE_DEFAULT = os.path.expanduser('~/dotfiles')
+SOURCE_OVERRIDE = os.path.expanduser('~/.simpledot')
 RE_DOTFILE = re.compile('dotfile\s+@\s+(.*)')
 
 COLOR_PREFIX = '\033['
@@ -101,36 +102,35 @@ def can_symlink():
     return not is_windows()
 
 
+def get_srcdir():
+    srcdir = SOURCE_DEFAULT
+    if os.path.exists(SOURCE_OVERRIDE):
+        with open(SOURCE_OVERRIDE) as f:
+            srcdir = f.read()
+    if not os.path.exists(srcdir):
+        sys.exit("error: no sources, first use 'source' to add a directory")
+    return srcdir
+
+
 def cmd_source(args):
     path = os.path.expanduser(args.path)
     path = os.path.abspath(path)
     if not os.path.exists(path):
         sys.exit("error: '{}' not found".format(path))
 
-    if os.path.exists(SOURCE):
-        sys.exit("error: '{}' already exists, delete it if you'd like to add"
-                 " a different source".format(SOURCE))
+    srcdir = SOURCE_OVERRIDE
 
-    if can_symlink():
-        os.symlink(path, SOURCE)
-    else:
-        with open(SOURCE, 'w') as f:
-            f.write(path)
+    if os.path.exists(srcdir):
+        sys.exit("error: '{}' already exists, delete it if you'd like to add"
+                 " a different source".format(srcdir))
+
+    with open(srcdir, 'w') as f:
+        f.write(path)
 
 
 def yield_annotations():
-    source = None
-    if not os.path.exists(SOURCE):
-        sys.exit("error: no sources, first use 'source' to add a directory")
-    if not os.path.islink(SOURCE):
-        if can_symlink():
-            warn("file '{}' is not a symbolic link even though the system"
-                 " supports them".format(SOURCE))
-        with open(SOURCE) as f:
-            source = f.read()
-    if not source:
-        source = SOURCE
-    for root, dirnames, filenames in os.walk(source, topdown=True):
+    srcdir = get_srcdir()
+    for root, dirnames, filenames in os.walk(srcdir, topdown=True):
         # In-place modify dirnames to tell `walk()` to skip these directories
         # Requires `topdown=True` to work.
         for dirname in IGNORE_DIRS:
@@ -163,19 +163,20 @@ def yield_annotations():
 
 
 def cmd_list(args):
-    print("Source: {}\n".format(SOURCE))
+    srcdir = get_srcdir()
+    print("Source: {}\n".format(srcdir))
 
     annotations = list(sorted(yield_annotations()))
 
     # Compute longest left-hand-side of ->
     max_srclen = 0
     for src, _ in annotations:
-        relsrc = os.path.relpath(src, SOURCE)
+        relsrc = os.path.relpath(src, srcdir)
         if len(relsrc) > max_srclen:
             max_srclen = len(relsrc)
 
     for src, dst in annotations:
-        relsrc = os.path.relpath(src, SOURCE)
+        relsrc = os.path.relpath(src, srcdir)
         parts = [
             checkmark(os.path.exists(dst)),
             relsrc.ljust(max_srclen),
@@ -212,7 +213,7 @@ def cmd_up(args):
 
 def cmd_down(args):
     for src, dst in yield_annotations():
-        if not os.path.exists(dst):
+        if not os.path.lexists(dst):
             warn("'{}' does not exist".format(dst))
             continue
         if not os.path.islink(dst) and can_symlink():
