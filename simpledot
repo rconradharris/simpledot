@@ -172,6 +172,8 @@ def cmd_list(args):
     srcdir = get_srcdir()
     print("Source: {}\n".format(srcdir))
 
+    userpath = os.path.expanduser('~')
+
     annotations = list(sorted(yield_annotations()))
 
     # Compute longest left-hand-side of ->
@@ -183,12 +185,27 @@ def cmd_list(args):
 
     for src, dst in annotations:
         relsrc = os.path.relpath(src, srcdir)
+
+        if dst.startswith(userpath):
+            shortdst = '~/{}'.format(dst.lstrip(userpath))
+
+        msg = None
+        if not os.path.exists(dst):
+            msg = 'not found'
+        elif not os.path.islink(dst):
+            msg = 'not a symlink'
+
         parts = [
-            checkmark(os.path.exists(dst)),
+            checkmark(msg is None),
             relsrc.ljust(max_srclen),
             rightarrow(),
-            dst
+            shortdst,
         ]
+
+        if msg:
+            msg = colorize('({})'.format(msg), color='yellow')
+            parts.append(msg)
+
         print(u' '.join(parts))
 
 
