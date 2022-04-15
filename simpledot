@@ -4,6 +4,7 @@ from __future__ import print_function
 import argparse
 import errno
 import os
+from pathlib import Path
 import re
 import sys
 import platform
@@ -129,8 +130,61 @@ def cmd_source(args):
         f.write(path)
 
 
+def read_annotation(src, filename):
+    dst = None
+    with open(src, encoding="utf8") as f:
+        match = RE_DOTFILE.search(f.read())
+        if match:
+            dst =  match.group(1).strip()
+        elif filename.startswith('.'):
+            # Files starting with a dot get a default annotation if
+            # one is missing
+            dst = os.path.join('~', filename)
+        if dst:
+            dst = os.path.expanduser(dst)
+    return dst
+
+
+def get_profile_from_path(path):
+    ps = Path(path).parts
+    i = ps.index('profiles')
+    try:
+        profile = ps[i + 1]
+    except IndexError:
+        profile = 'default'
+    return profile
+
+
+def guess_current_profile():
+    """
+    We don't want to have to supply --profile for the 'down' command, we just
+    want it to do the correct thing.
+
+    To do this, the 'down' command needs to know which profile it was
+    originally run with so it can properly unlink everything.
+
+    To do this, it scans the existing symlinks looking for one that symlinks
+    into a 'profiles' directory. The first one it finds is considered the
+    profile. If it finds none, then 'default' is assumed.
+    """
+    profile = 'default'
+    for p, anns in annotations_by_profile().items():
+        if p == 'default':
+            continue
+        for dst, src in anns.items():
+            if not os.path.islink(dst):
+                continue
+            realdst = os.path.realpath(dst)
+            if src == realdst:
+                profile = p
+                break
+    return profile
+
+
 def yield_annotations():
+    profile = 'default'
     srcdir = get_srcdir()
+    profdir = os.path.join(srcdir, 'profiles')
     for root, dirnames, filenames in os.walk(srcdir, topdown=True):
         # In-place modify dirnames to tell `walk()` to skip these directories
         # Requires `topdown=True` to work.
@@ -144,6 +198,8 @@ def yield_annotations():
                 filenames.remove(fname)
             except ValueError:
                 pass  # Not found
+        if root.startswith(profdir):
+            profile = get_profile_from_path(root)
         for filename in filenames:
             ignore = False
             for suffix in IGNORE_SUFFIXES:
@@ -153,19 +209,30 @@ def yield_annotations():
             if ignore:
                 continue
             src = os.path.join(root, filename)
-            with open(src, encoding="utf8") as f:
-                match = RE_DOTFILE.search(f.read())
-                if match:
-                    dst =  match.group(1).strip()
-                    dst = os.path.expanduser(dst)
-                    yield src, dst
-                elif filename.startswith('.'):
-                    # Files starting with a dot get a default annotation if
-                    # one is missing
-                    dst = os.path.join('~', filename)
-                    dst = os.path.expanduser(dst)
-                    yield src, dst
+            dst = read_annotation(src, filename)
+            if dst:
+                yield src, dst, profile
 
+
+def annotations_by_profile():
+    d = {}
+    for src, dst, profile in yield_annotations():
+        x = d.setdefault(profile, {})
+        x[dst] = src
+    return d
+
+
+def annotations_for_profile(profile):
+    d = annotations_by_profile()
+    x = d.get('default', {})
+    y = d.get(profile, {})
+    x.update(y)
+    return x
+
+
+def annotations_for_current_profile():
+    cur = guess_current_profile()
+    return annotations_for_profile(cur)
 
 
 def cmd_list(args):
@@ -174,16 +241,17 @@ def cmd_list(args):
 
     userpath = os.path.expanduser('~')
 
-    annotations = list(sorted(yield_annotations()))
+    anns = [(s, d) for d, s in annotations_for_current_profile().items()]
+    anns.sort()
 
     # Compute longest left-hand-side of ->
     max_srclen = 0
-    for src, _ in annotations:
+    for src, _ in anns:
         relsrc = os.path.relpath(src, srcdir)
         if len(relsrc) > max_srclen:
             max_srclen = len(relsrc)
 
-    for src, dst in annotations:
+    for src, dst in anns:
         relsrc = os.path.relpath(src, srcdir)
 
         if dst.startswith(userpath):
@@ -209,8 +277,19 @@ def cmd_list(args):
         print(u' '.join(parts))
 
 
+def validate_profile(profile):
+    if profile == 'default':
+        return
+    srcdir = get_srcdir()
+    path = os.path.join(srcdir, 'profiles', profile)
+    if not os.path.exists(path):
+        sys.exit(f"profile '{profile}' not found")
+
+
 def cmd_up(args):
-    for src, dst in yield_annotations():
+    validate_profile(args.profile)
+    anns = annotations_for_profile(args.profile)
+    for dst, src in anns.items():
         if not os.path.exists(src):
             warn("source file '{}' does not exist".format(src))
             continue
@@ -235,7 +314,8 @@ def cmd_up(args):
 
 
 def cmd_down(args):
-    for src, dst in yield_annotations():
+    anns = annotations_for_current_profile()
+    for dst, src in anns.items():
         if not os.path.lexists(dst):
             warn("'{}' does not exist".format(dst))
             continue
@@ -257,6 +337,7 @@ def main():
     source_parser.set_defaults(func=cmd_source)
 
     source_parser = subparsers.add_parser('up')
+    source_parser.add_argument('-p', '--profile', default='default')
     source_parser.set_defaults(func=cmd_up)
 
     source_parser = subparsers.add_parser('down')
